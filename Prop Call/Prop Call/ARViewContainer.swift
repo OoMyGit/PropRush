@@ -13,18 +13,11 @@ struct ARViewContainer: UIViewRepresentable {
     var didCaptureBuffer: (CVPixelBuffer) -> Void
 
     func makeCoordinator() -> ARCoordinator {
-        let coordinator = ARCoordinator()
-        coordinator.didCaptureBuffer = didCaptureBuffer
-        return coordinator
+        return ARCoordinator(didCaptureBuffer: didCaptureBuffer)
     }
 
     func makeUIView(context: Context) -> ARView {
-        let arView = ARView(frame: .zero)
-        let config = ARWorldTrackingConfiguration()
-        config.planeDetection = [.horizontal, .vertical]
-        arView.session.run(config)
-        arView.session.delegate = context.coordinator
-        return arView
+        return context.coordinator.arView!
     }
 
     func updateUIView(_ uiView: ARView, context: Context) {}
