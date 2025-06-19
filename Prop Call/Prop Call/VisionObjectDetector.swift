@@ -5,15 +5,21 @@
 //  Created by Alfred Hans Witono on 18/06/25.
 //
 
+//
+//  VisionObjectDetector.swift
+//  Prop Call
+//
+//  Created by Alfred Hans Witono on 18/06/25.
+//
+
 import SwiftUI
 import ARKit
 import CoreML
-import NaturalLanguage
+import Vision
 
 class VisionObjectDetector: ObservableObject {
     @Published var detectedLabel: String = ""
     @Published var matchFound: Bool = false
-    @Published var score: Int = 0
 
     private var classificationRequest: VNCoreMLRequest?
 
@@ -30,26 +36,27 @@ class VisionObjectDetector: ObservableObject {
             }
             classificationRequest?.imageCropAndScaleOption = .centerCrop
         } catch {
-            print("Failed to load model: \(error)")
+            print("❌ Failed to load model: \(error)")
         }
     }
 
-    func detectObject(in image: UIImage, spokenObject: String) {
-        guard let cgImage = image.cgImage else { return }
-        guard let request = classificationRequest else { return }
+    func detectObject(in image: UIImage) {
+        guard let cgImage = image.cgImage,
+              let request = classificationRequest else { return }
 
         let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
         do {
             try handler.perform([request])
         } catch {
-            print("Vision request failed: \(error)")
+            print("❌ Vision request failed: \(error)")
         }
     }
-    
+
     private func processClassifications(for request: VNRequest) {
         DispatchQueue.main.async {
-            guard let observations = request.results as? [VNRecognizedObjectObservation], !observations.isEmpty else {
-                self.detectedLabel = "Nothing"
+            guard let observations = request.results as? [VNRecognizedObjectObservation],
+                  !observations.isEmpty else {
+                self.detectedLabel = ""
                 return
             }
 
@@ -61,24 +68,27 @@ class VisionObjectDetector: ObservableObject {
         }
     }
 
-    func checkMatch(with spoken: String) {
-        if detectedLabel.lowercased() == spoken.lowercased() {
+    func checkMatch(with spoken: String, startsWith letter: String, onSuccess: () -> Void) {
+        let detected = detectedLabel.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        let spokenLower = spoken.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        let prefix = letter.lowercased()
+
+        print("🧠 Checking match... Detected: \(detected), Spoken: \(spokenLower), Letter: \(prefix)")
+
+        if detected.hasPrefix(prefix) && spokenLower.hasPrefix(prefix) {
             matchFound = true
-            score += 1
+            onSuccess() // ← Notify game manager to add score and start next round
         } else {
             matchFound = false
         }
     }
-    
+
     func resetRound() {
         detectedLabel = ""
         matchFound = false
     }
 
     func resetGame() {
-        detectedLabel = ""
-        matchFound = false
-        score = 0
+        resetRound()
     }
-
 }

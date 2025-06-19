@@ -41,7 +41,7 @@ class ARCoordinator: NSObject, ObservableObject, ARSessionDelegate {
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
         let currentTime = CACurrentMediaTime()
         guard currentTime - lastProcessedTime >= processingInterval else { return }
-        lastProcessedTime = currentTimeci
+        lastProcessedTime = currentTime
 
         let buffer = frame.capturedImage
 

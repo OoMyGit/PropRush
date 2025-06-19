@@ -19,10 +19,9 @@ import AVFoundation
 struct ARVoiceIntentView: View {
     @StateObject private var speechRecognizer = SpeechRecognizer()
     @StateObject private var detector = VisionObjectDetector()
-    
     @StateObject private var multiplayer = MultipeerManager()
-    @State private var currentChallenge: String = ""
-//    @State private var isHost: Bool = true
+    @StateObject private var gameManager = GameRoundManager()
+
     @State private var showNotification = false
     @State private var currentRound = 1
     @State private var gameOver = false
@@ -31,35 +30,33 @@ struct ARVoiceIntentView: View {
     @State private var username: String = ""
     @State private var isUsernameSet = false
 
-
-
     let totalRounds = 5
-
 
     var body: some View {
         ZStack(alignment: .bottom) {
             if isUsernameSet {
-                ARViewContainer(didCaptureBuffer: { pixelBuffer in
-                    detector.detectObject(in: pixelBuffer, spokenObject: speechRecognizer.spokenText)
-                    detector.checkMatch(with: speechRecognizer.spokenText)
+                ARViewContainer(didCaptureBuffer: { scannedImage in
+                    detector.detectObject(in: scannedImage)
+                    detector.checkMatch(
+                        with: speechRecognizer.spokenText,
+                        startsWith: gameManager.currentLetter
+                    ) {
+                        gameManager.incrementScoreAndNextRound {
+                            multiplayer.sendScore(gameManager.score)
+                        }
+                    }
+
                 })
                 .edgesIgnoringSafeArea(.all)
 
                 VStack(spacing: 10) {
-                    Text("🎤 Challenge: \(multiplayer.receivedChallenge.isEmpty ? currentChallenge : multiplayer.receivedChallenge)")
+                    Text("🎤 \(gameManager.promptText())")
+                    Text("⏳ Time Left: \(gameManager.timeRemaining) sec")
                     Text("You said: \(speechRecognizer.spokenText)")
                     Text("Detected: \(detector.detectedLabel)")
                     Text("✅ Match: \(detector.matchFound ? "Yes" : "No")")
-                    Text("🎯 Score: \(detector.score)")
-                    Text("🔄 Round \(currentRound) / \(totalRounds)")
-
-                    if isHost {
-                        Button("🎯 New Challenge") {
-                            let randomWord = ["apple", "chair", "banana", "bottle", "book"].randomElement()!
-                            currentChallenge = randomWord
-                            multiplayer.sendChallenge(word: randomWord)
-                        }
-                    }
+                    Text("🎯 Score: \(gameManager.score)")
+                    Text("🔄 Round \(gameManager.round) / \(totalRounds)")
 
                     Button(action: {
                         if speechRecognizer.isListening {
@@ -72,12 +69,8 @@ struct ARVoiceIntentView: View {
                                             DispatchQueue.main.async {
                                                 speechRecognizer.startListening()
                                             }
-                                        } else {
-                                            print("Microphone access denied")
                                         }
                                     }
-                                } else {
-                                    print("Speech recognition access denied")
                                 }
                             }
                         }
@@ -100,12 +93,13 @@ struct ARVoiceIntentView: View {
                                 speechRecognizer.spokenText = ""
                                 showNotification = false
 
-                                multiplayer.sendScore(detector.score)
+                                multiplayer.sendScore(gameManager.score)
 
-                                if currentRound < totalRounds {
-                                    currentRound += 1
+                                if gameManager.round < totalRounds {
+                                    gameManager.incrementScoreAndNextRound()
                                 } else {
                                     gameOver = true
+                                    gameManager.stop()
                                     winner = multiplayer.peerScores.max(by: { $0.value < $1.value })?.key ?? "No one"
                                 }
                             }
@@ -130,6 +124,7 @@ struct ARVoiceIntentView: View {
                 .onChange(of: detector.matchFound) { newValue in
                     if newValue && !showNotification {
                         showNotification = true
+                        gameManager.endRound()
                     }
                 }
                 .alert(isPresented: $gameOver) {
@@ -145,28 +140,30 @@ struct ARVoiceIntentView: View {
                 .padding()
             } else {
                 VStack {
-                            Text("Enter your name")
-                                .font(.title)
-                                .padding()
-
-                            TextField("Your name", text: $username)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .padding()
-
-                            Button("Start Game") {
-                                multiplayer.setUsername(username)
-                                isUsernameSet = true
-                            }
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                        }
+                    Text("Enter your name")
+                        .font(.title)
                         .padding()
+
+                    TextField("Your name", text: $username)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding()
+
+                    Button("Start Game") {
+                        multiplayer.setUsername(username)
+                        isUsernameSet = true
+                        gameManager.startGame()
+                    }
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                }
+                .padding()
             }
         }
     }
 }
+
 
 #Preview {
     ARVoiceIntentView()
