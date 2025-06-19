@@ -18,11 +18,11 @@ class GameRoundManager: ObservableObject {
 
     private var timer: Timer?
     private let maxRounds: Int = 5
-    private let validLetters: [String] = "ABCDEFGHIKLMNOPRSTUVWY".map { String($0) }
+    private let validLetters: [String] = "ABCDEFGHIKLMNOPRSTUVW".map { String($0) }
 
     func startGame() {
         score = 0
-        round = 1
+        round = 0
         gameOver = false
         startNewRound()
     }
@@ -38,6 +38,8 @@ class GameRoundManager: ObservableObject {
         currentLetter = validLetters.randomElement() ?? "B"
         timeRemaining = 30
         startTimer()
+        
+        round += 1
     }
 
     private func startTimer() {
@@ -54,8 +56,6 @@ class GameRoundManager: ObservableObject {
     }
 
     private func handleNoMatchAndContinue() {
-        endRound()
-        round += 1
         startNewRound()
     }
 
@@ -66,7 +66,6 @@ class GameRoundManager: ObservableObject {
 
     func incrementScoreAndNextRound(onSuccess: (() -> Void)? = nil) {
         score += 1
-        round += 1
         startNewRound()
         onSuccess?()
     }
@@ -77,5 +76,12 @@ class GameRoundManager: ObservableObject {
 
     func promptText() -> String {
         "Find something starting with: \"\(currentLetter)\""
+    }
+    
+    func setState(round: Int, score: Int, currentLetter: String, timeRemaining: Int) {
+        self.round = round
+        self.score = score
+        self.currentLetter = currentLetter
+        self.timeRemaining = timeRemaining
     }
 }

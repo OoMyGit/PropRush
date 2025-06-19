@@ -75,9 +75,9 @@ class VisionObjectDetector: ObservableObject {
 
         print("🧠 Checking match... Detected: \(detected), Spoken: \(spokenLower), Letter: \(prefix)")
 
-        if detected.hasPrefix(prefix) && spokenLower.hasPrefix(prefix) {
+        if !matchFound && detected.hasPrefix(prefix) && spokenLower.hasPrefix(prefix) {
             matchFound = true
-            onSuccess() // ← Notify game manager to add score and start next round
+            onSuccess()
         } else {
             matchFound = false
         }

@@ -10,11 +10,7 @@ import RealityKit
 import ARKit
 import Speech
 import CoreML
-import NaturalLanguage
-import Foundation
-import Speech
 import AVFoundation
-
 
 struct ARVoiceIntentView: View {
     @StateObject private var speechRecognizer = SpeechRecognizer()
@@ -23,12 +19,10 @@ struct ARVoiceIntentView: View {
     @StateObject private var gameManager = GameRoundManager()
 
     @State private var showNotification = false
-    @State private var currentRound = 1
     @State private var gameOver = false
     @State private var winner: String = ""
-    @State private var isHost: Bool = UIDevice.current.name.contains("YourNameHere")
-    @State private var username: String = ""
     @State private var isUsernameSet = false
+    @State private var username: String = ""
 
     let totalRounds = 5
 
@@ -41,11 +35,32 @@ struct ARVoiceIntentView: View {
                         with: speechRecognizer.spokenText,
                         startsWith: gameManager.currentLetter
                     ) {
-                        gameManager.incrementScoreAndNextRound {
-                            multiplayer.sendScore(gameManager.score)
+                        if !showNotification {
+                            showNotification = true
+                            gameManager.endRound()
+
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                detector.resetRound()
+                                speechRecognizer.spokenText = ""
+                                showNotification = false
+
+                                if gameManager.round < totalRounds {
+                                    gameManager.incrementScoreAndNextRound {
+                                        multiplayer.sendGameState(
+                                            round: gameManager.round,
+                                            score: gameManager.score,
+                                            currentLetter: gameManager.currentLetter,
+                                            timeRemaining: gameManager.timeRemaining
+                                        )
+                                    }
+                                } else {
+                                    gameOver = true
+                                    gameManager.stop()
+                                    winner = multiplayer.peerScores.max(by: { $0.value < $1.value })?.key ?? "No one"
+                                }
+                            }
                         }
                     }
-
                 })
                 .edgesIgnoringSafeArea(.all)
 
@@ -87,22 +102,6 @@ struct ARVoiceIntentView: View {
                             Text("🎉 You found it!")
                                 .foregroundColor(.green)
                                 .font(.headline)
-
-                            Button("Next Round") {
-                                detector.resetRound()
-                                speechRecognizer.spokenText = ""
-                                showNotification = false
-
-                                multiplayer.sendScore(gameManager.score)
-
-                                if gameManager.round < totalRounds {
-                                    gameManager.incrementScoreAndNextRound()
-                                } else {
-                                    gameOver = true
-                                    gameManager.stop()
-                                    winner = multiplayer.peerScores.max(by: { $0.value < $1.value })?.key ?? "No one"
-                                }
-                            }
                         }
                         .padding()
                         .background(Color.white)
@@ -114,17 +113,11 @@ struct ARVoiceIntentView: View {
                             .font(.headline)
                             .foregroundColor(.yellow)
 
-                        ForEach(multiplayer.peerScores.sorted(by: { $0.value > $1.value }), id: \.key) { name, score in
+                        ForEach(multiplayer.peerScores.sorted(by: { $0.value > $1.value }), id: \ .key) { name, score in
                             Text("\(name): \(score)")
                                 .font(.caption)
                                 .foregroundColor(.white)
                         }
-                    }
-                }
-                .onChange(of: detector.matchFound) { newValue in
-                    if newValue && !showNotification {
-                        showNotification = true
-                        gameManager.endRound()
                     }
                 }
                 .alert(isPresented: $gameOver) {
@@ -152,6 +145,13 @@ struct ARVoiceIntentView: View {
                         multiplayer.setUsername(username)
                         isUsernameSet = true
                         gameManager.startGame()
+
+                        multiplayer.sendGameState(
+                            round: gameManager.round,
+                            score: gameManager.score,
+                            currentLetter: gameManager.currentLetter,
+                            timeRemaining: gameManager.timeRemaining
+                        )
                     }
                     .padding()
                     .background(Color.blue)
@@ -161,9 +161,11 @@ struct ARVoiceIntentView: View {
                 .padding()
             }
         }
+        .onReceive(multiplayer.receivedGameStatePublisher) { state in
+            gameManager.setState(round: state.round, score: state.score, currentLetter: state.currentLetter, timeRemaining: state.timeRemaining)
+        }
     }
 }
-
 
 #Preview {
     ARVoiceIntentView()
