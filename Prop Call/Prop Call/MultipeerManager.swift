@@ -22,7 +22,7 @@ struct GameStateWrapper: Codable {
 }
 
 class MultipeerManager: NSObject, ObservableObject {
-    private let serviceType = "prop-call"
+    private let serviceType = "propcallgame"
     private let myPeerID = MCPeerID(displayName: UIDevice.current.name)
 
     private var session: MCSession!

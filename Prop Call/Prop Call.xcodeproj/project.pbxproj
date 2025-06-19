@@ -10,22 +10,9 @@
 		3512D3AD2DF057AA006C41C3 /* Prop Call.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Prop Call.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		3517F5D02E041F080067BF36 /* Exceptions for "Prop Call" folder in "Prop Call" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"Prop-Call-Info.plist",
-			);
-			target = 3512D3AC2DF057AA006C41C3 /* Prop Call */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3512D3AF2DF057AA006C41C3 /* Prop Call */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				3517F5D02E041F080067BF36 /* Exceptions for "Prop Call" folder in "Prop Call" target */,
-			);
 			path = "Prop Call";
 			sourceTree = "<group>";
 		};
