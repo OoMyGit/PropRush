@@ -68,4 +68,16 @@ class VisionObjectDetector: ObservableObject {
             matchFound = false
         }
     }
+    
+    func resetRound() {
+        detectedLabel = ""
+        matchFound = false
+    }
+
+    func resetGame() {
+        detectedLabel = ""
+        matchFound = false
+        score = 0
+    }
+
 }
