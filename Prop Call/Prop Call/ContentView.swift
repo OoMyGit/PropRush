@@ -22,8 +22,8 @@ struct ARVoiceIntentView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            ARViewContainer(didCaptureBuffer: { pixelBuffer in
-                detector.detectObject(in: pixelBuffer, spokenObject: speechRecognizer.spokenText)
+            ARViewContainer(didCaptureBuffer: { scannedImage in
+                detector.detectObject(in: scannedImage, spokenObject: speechRecognizer.spokenText)
                 detector.checkMatch(with: speechRecognizer.spokenText)
             })
             .edgesIgnoringSafeArea(.all)
