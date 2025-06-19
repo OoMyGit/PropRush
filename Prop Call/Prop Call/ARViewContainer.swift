@@ -10,7 +10,7 @@ import RealityKit
 import ARKit
 
 struct ARViewContainer: UIViewRepresentable {
-    var didCaptureBuffer: (CVPixelBuffer) -> Void
+    var didCaptureBuffer: (UIImage) -> Void
 
     func makeCoordinator() -> ARCoordinator {
         return ARCoordinator(didCaptureBuffer: didCaptureBuffer)

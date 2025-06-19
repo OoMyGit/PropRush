@@ -8,14 +8,15 @@
 import SwiftUI
 import RealityKit
 import ARKit
+import CoreImage
 
 class ARCoordinator: NSObject, ObservableObject, ARSessionDelegate {
     var arView: ARView?
-    var didCaptureBuffer: ((CVPixelBuffer) -> Void)?
+    var didCaptureBuffer: ((UIImage) -> Void)?
     private var lastProcessedTime: TimeInterval = 0
-    private let processingInterval: TimeInterval = 0.5  // 0.5s = 2 fps
+    private let processingInterval: TimeInterval = 0.5  // every 0.5s
 
-    init(didCaptureBuffer: ((CVPixelBuffer) -> Void)? = nil) {
+    init(didCaptureBuffer: ((UIImage) -> Void)? = nil) {
         self.didCaptureBuffer = didCaptureBuffer
         super.init()
         setupARView()
@@ -26,7 +27,7 @@ class ARCoordinator: NSObject, ObservableObject, ARSessionDelegate {
         guard let arView = arView else { return }
 
         let config = ARWorldTrackingConfiguration()
-        config.planeDetection = [.horizontal]
+        config.planeDetection = []
         arView.session.delegate = self
         arView.session.run(config)
 
@@ -40,13 +41,34 @@ class ARCoordinator: NSObject, ObservableObject, ARSessionDelegate {
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
         let currentTime = CACurrentMediaTime()
         guard currentTime - lastProcessedTime >= processingInterval else { return }
+        lastProcessedTime = currentTimeci
 
-        lastProcessedTime = currentTime
         let buffer = frame.capturedImage
-        didCaptureBuffer?(buffer)
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            if let image = self.pixelBufferToUIImagePortrait(buffer) {
+                DispatchQueue.main.async {
+                    self.didCaptureBuffer?(image)
+                }
+            }
+        }
     }
 
-    func create3DText(_ string: String, color: UIColor, scale: Float) -> ModelEntity {
+    // MARK: - Convert CVPixelBuffer to UIImage (Portrait Oriented)
+    private func pixelBufferToUIImagePortrait(_ pixelBuffer: CVPixelBuffer) -> UIImage? {
+        let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+            .oriented(CGImagePropertyOrientation.right)
+
+        let context = CIContext()
+        guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else {
+            return nil
+        }
+
+        return UIImage(cgImage: cgImage, scale: 1.0, orientation: .up)
+    }
+
+
+    private func create3DText(_ string: String, color: UIColor, scale: Float) -> ModelEntity {
         let mesh = MeshResource.generateText(string, extrusionDepth: 0.02, font: .systemFont(ofSize: 0.15))
         let material = SimpleMaterial(color: color, isMetallic: false)
         let entity = ModelEntity(mesh: mesh, materials: [material])

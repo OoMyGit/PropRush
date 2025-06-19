@@ -39,8 +39,8 @@ struct ARVoiceIntentView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             if isUsernameSet {
-                ARViewContainer(didCaptureBuffer: { pixelBuffer in
-                    detector.detectObject(in: pixelBuffer, spokenObject: speechRecognizer.spokenText)
+                ARViewContainer(didCaptureBuffer: { scannedImage in
+                    detector.detectObject(in: scannedImage, spokenObject: speechRecognizer.spokenText)
                     detector.checkMatch(with: speechRecognizer.spokenText)
                 })
                 .edgesIgnoringSafeArea(.all)
@@ -74,28 +74,6 @@ struct ARVoiceIntentView: View {
                                             }
                                         } else {
                                             print("Microphone access denied")
-                                        }
-                                    }
-                                } else {
-                                    print("Speech recognition access denied")
-                                }
-                            }
-                        }
-                    }) {
-                        Text(speechRecognizer.isListening ? "Stop Listening" : "Start Listening")
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                    }
-
-                    if showNotification {
-                        VStack {
-                            Text("🎉 You found it!")
-                                .foregroundColor(.green)
-                                .font(.headline)
-
-                            Button("Next Round") {
                                 detector.resetRound()
                                 speechRecognizer.spokenText = ""
                                 showNotification = false

@@ -34,17 +34,18 @@ class VisionObjectDetector: ObservableObject {
         }
     }
 
-    func detectObject(in pixelBuffer: CVPixelBuffer, spokenObject: String) {
+    func detectObject(in image: UIImage, spokenObject: String) {
+        guard let cgImage = image.cgImage else { return }
         guard let request = classificationRequest else { return }
 
-        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, options: [:])
+        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
         do {
             try handler.perform([request])
         } catch {
             print("Vision request failed: \(error)")
         }
     }
-
+    
     private func processClassifications(for request: VNRequest) {
         DispatchQueue.main.async {
             guard let observations = request.results as? [VNRecognizedObjectObservation], !observations.isEmpty else {
