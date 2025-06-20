@@ -23,6 +23,7 @@ struct ARVoiceIntentView: View {
     @State private var winner: String = ""
     @State private var isUsernameSet = false
     @State private var username: String = ""
+    @State private var showUsernameTakenAlert = false
 
     let totalRounds = 5
 
@@ -52,7 +53,9 @@ struct ARVoiceIntentView: View {
                                             currentLetter: gameManager.currentLetter,
                                             timeRemaining: gameManager.timeRemaining
                                         )
+                                        multiplayer.sendScore(gameManager.score)
                                     }
+
                                 } else {
                                     gameOver = true
                                     gameManager.stop()
@@ -113,8 +116,8 @@ struct ARVoiceIntentView: View {
                             .font(.headline)
                             .foregroundColor(.yellow)
 
-                        ForEach(multiplayer.peerScores.sorted(by: { $0.value > $1.value }), id: \ .key) { name, score in
-                            Text("\(name): \(score)")
+                        ForEach(multiplayer.peerScores.sorted(by: { $0.value > $1.value }), id: \.key) { name, score in
+                            Text("\(name)\(multiplayer.hostName == name ? " 👑" : ""): \(score)")
                                 .font(.caption)
                                 .foregroundColor(.white)
                         }
@@ -138,11 +141,21 @@ struct ARVoiceIntentView: View {
                         .padding()
 
                     TextField("Your name", text: $username)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .padding()
+                        .onChange(of: username) { _, newValue in
+                            if multiplayer.peerScores.keys.contains(newValue) {
+                                showUsernameTakenAlert = true
+                            }
+                        }
+                        .alert("Username Taken", isPresented: $showUsernameTakenAlert) {
+                            Button("OK", role: .cancel) {
+                                // Optionally clear the name or reset input
+                                username = ""
+                            }
+                        }
 
                     Button("Start Game") {
                         multiplayer.setUsername(username)
+                        multiplayer.sendScore(0)
                         isUsernameSet = true
                         gameManager.startGame()
 
@@ -162,7 +175,12 @@ struct ARVoiceIntentView: View {
             }
         }
         .onReceive(multiplayer.receivedGameStatePublisher) { state in
-            gameManager.setState(round: state.round, score: state.score, currentLetter: state.currentLetter, timeRemaining: state.timeRemaining)
+            gameManager.setState(
+                round: state.round,
+                score: gameManager.score, // Keep local score
+                currentLetter: state.currentLetter,
+                timeRemaining: state.timeRemaining
+            )
         }
     }
 }

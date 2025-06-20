@@ -5,6 +5,11 @@
 //  Created by Alfred Hans Witono on 04/06/25.
 //
 
+//  MultipeerManager.swift
+//  Prop Call
+//
+//  Created by Alfred Hans Witono on 04/06/25.
+
 import Foundation
 import MultipeerConnectivity
 import Combine
@@ -30,6 +35,8 @@ class MultipeerManager: NSObject, ObservableObject {
     private var browser: MCNearbyServiceBrowser!
 
     @Published var peerScores: [String: Int] = [:]
+    @Published var hostName: String? = nil
+    @Published var peerDisplayNames: [MCPeerID: String] = [:]
     var receivedGameStatePublisher = PassthroughSubject<GameState, Never>()
 
     private var username: String = ""
@@ -49,18 +56,33 @@ class MultipeerManager: NSObject, ObservableObject {
         browser.startBrowsingForPeers()
     }
 
+    func sendHostName(_ name: String) {
+        let dict: [String: Any] = ["type": "host", "host": name]
+        if let data = try? JSONSerialization.data(withJSONObject: dict, options: []) {
+            sendDataToAllPeers(data)
+        }
+    }
+    
     func setUsername(_ name: String) {
         username = name
         peerScores[name] = 0
+        
+        if hostName == nil {
+            hostName = name
+            sendHostName(name)
+        }
     }
+
 
     func sendScore(_ score: Int) {
         guard !username.isEmpty else { return }
+        peerScores[username] = score
         let dict: [String: Any] = ["type": "score", "name": username, "score": score]
         if let data = try? JSONSerialization.data(withJSONObject: dict, options: []) {
             sendDataToAllPeers(data)
         }
     }
+
 
     func sendGameState(round: Int, score: Int, currentLetter: String, timeRemaining: Int) {
         let gameState = GameState(round: round, score: score, currentLetter: currentLetter, timeRemaining: timeRemaining)
@@ -92,13 +114,36 @@ extension MultipeerManager: MCSessionDelegate, MCNearbyServiceAdvertiserDelegate
                 self.receivedGameStatePublisher.send(wrapper.state)
             }
         } else if let dict = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-                  let type = dict["type"] as? String, type == "score",
-                  let name = dict["name"] as? String,
-                  let score = dict["score"] as? Int {
-            DispatchQueue.main.async {
-                self.peerScores[name] = score
+                  let type = dict["type"] as? String {
+
+            switch type {
+            case "score":
+                if let name = dict["name"] as? String,
+                   let score = dict["score"] as? Int {
+                    DispatchQueue.main.async {
+                        self.peerScores[name] = score
+                    }
+                }
+
+            case "username":
+                if let username = dict["username"] as? String {
+                    DispatchQueue.main.async {
+                        self.peerDisplayNames[peerID] = username
+                    }
+                }
+
+            case "host":
+                if let host = dict["host"] as? String {
+                    DispatchQueue.main.async {
+                        self.hostName = host
+                    }
+                }
+
+            default:
+                break
             }
         }
+
     }
 
     func session(_ session: MCSession, didReceive stream: InputStream, withName streamName: String, fromPeer peerID: MCPeerID) {}
