@@ -121,20 +121,62 @@ class MultipeerManager: NSObject, ObservableObject {
             print("Send error: \(error.localizedDescription)")
         }
     }
+    
+    private func sendFullPeerScores(to peer: MCPeerID) {
+        for (name, score) in peerScores {
+            let dict: [String: Any] = [
+                "type": "score",
+                "name": name,
+                "score": score
+            ]
+            if let data = try? JSONSerialization.data(withJSONObject: dict) {
+                try? session.send(data, toPeers: [peer], with: .reliable)
+            }
+        }
+    }
+    
+    func sendFullPlayerList() {
+        let dict: [String: Any] = [
+            "type": "players",
+            "players": Array(peerScores.keys)
+        ]
+        if let data = try? JSONSerialization.data(withJSONObject: dict) {
+            sendDataToAllPeers(data)
+        }
+    }
+    
+    func sendGameOver(winner: String) {
+        let dict: [String: Any] = [
+            "type": "gameOver",
+            "winner": winner
+        ]
+        if let data = try? JSONSerialization.data(withJSONObject: dict) {
+            sendDataToAllPeers(data)
+        }
+    }
+    
 }
 
 // MARK: - Multipeer Delegate Methods
 extension MultipeerManager: MCSessionDelegate, MCNearbyServiceAdvertiserDelegate, MCNearbyServiceBrowserDelegate {
     func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
         print("Peer \(peerID.displayName) changed state: \(state.rawValue)")
-        
-        // When a peer connects, rebroadcast host name and our username
+
         if state == .connected {
             if let host = hostName {
                 sendHostName(host)
             }
+
             if !username.isEmpty {
                 sendUsernameAnnouncement(username)
+            }
+
+            // Send host's full state to new peer
+            sendFullPeerScores(to: peerID)
+            
+            // 🔥 Host sends full player list to all
+            if username == hostName {
+                sendFullPlayerList()
             }
         }
     }
@@ -171,10 +213,27 @@ extension MultipeerManager: MCSessionDelegate, MCNearbyServiceAdvertiserDelegate
                     if let host = dict["host"] as? String {
                         self.hostName = host
                     }
+                
+                case "players":
+                    if let playerList = dict["players"] as? [String] {
+                        for player in playerList {
+                            if self.peerScores[player] == nil {
+                                self.peerScores[player] = 0
+                            }
+                        }
+                    }
                     
                 case "startGame":
                     // The host has started the game
                     self.gameShouldStartPublisher.send()
+                    
+                case "gameOver":
+                    if let win = dict["winner"] as? String {
+                        DispatchQueue.main.async {
+                            self.peerScores[win, default: 0] += 0 // No-op to ensure they’re in list
+                            NotificationCenter.default.post(name: .gameDidEnd, object: win)
+                        }
+                    }
                     
                 default:
                     break

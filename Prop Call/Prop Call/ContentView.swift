@@ -23,6 +23,10 @@ extension Notification.Name {
     static let gameStateDidChange = Notification.Name("gameStateDidChange")
 }
 
+extension Notification.Name {
+    static let gameDidEnd = Notification.Name("gameDidEnd")
+}
+
 struct ARVoiceIntentView: View {
     // MARK: - State Objects
     @StateObject private var speechRecognizer = SpeechRecognizer()
@@ -81,6 +85,12 @@ struct ARVoiceIntentView: View {
                 currentLetter: state.currentLetter,
                 timeRemaining: state.timeRemaining
             )
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .gameDidEnd)) { notification in
+            if let win = notification.object as? String {
+                self.winner = win
+                self.gameOver = true
+            }
         }
     }
 
@@ -170,6 +180,12 @@ struct ARVoiceIntentView: View {
             }
             .listStyle(InsetGroupedListStyle())
             
+            Button("🔄 Refresh") {
+                if multiplayer.username == multiplayer.hostName {
+                    multiplayer.sendFullPlayerList()
+                }
+            }
+            
             // "Start Game" button, only visible to the host
             if multiplayer.username == multiplayer.hostName {
                 Button("Start Game") {
@@ -223,6 +239,7 @@ struct ARVoiceIntentView: View {
                                 gameManager.stop()
                                 winner = multiplayer.peerScores.max(by: { $0.value < $1.value })?.key ?? "No one"
                                 gameOver = true
+                                multiplayer.sendGameOver(winner: winner) // 🔥 Send to all peers
                             }
                         }
                     }
