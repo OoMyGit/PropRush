@@ -57,7 +57,13 @@ class GameRoundManager: ObservableObject {
 
     private func handleNoMatchAndContinue() {
         startNewRound()
+        
+        // Notify peers about the new state
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .gameStateDidChange, object: nil)
+        }
     }
+
 
     func endRound() {
         timer?.invalidate()
