@@ -2,9 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key></key>
+	<string></string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_propcallgame._tcp</string>
+	</array>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Fantastico.ttf</string>
 	</array>
 </dict>
 </plist>
