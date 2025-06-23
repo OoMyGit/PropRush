@@ -345,15 +345,17 @@ struct ARVoiceIntentView: View {
     private func GameOverlayView() -> some View {
         VStack(spacing: 10) {
             // Game Info Texts
-            VStack {
-                Text("🎤 \(gameManager.promptText())")
-                Text("⏳ Time Left: \(gameManager.timeRemaining) sec")
-                Text("You said: \(speechRecognizer.spokenText)")
-                Text("Detected: \(detector.detectedLabel)")
-                Text("✅ Match: \(detector.matchFound ? "Yes" : "No")")
-                Text("🎯 Score: \(gameManager.score)")
-                Text("🔄 Round \(gameManager.round) / \(totalRounds)")
-            }
+            // KosonginSek
+            
+//            VStack {
+//                Text("🎤 \(gameManager.promptText())")
+//                Text("⏳ Time Left: \(gameManager.timeRemaining) sec")
+//                Text("You said: \(speechRecognizer.spokenText)")
+//                Text("Detected: \(detector.detectedLabel)")
+//                Text("✅ Match: \(detector.matchFound ? "Yes" : "No")")
+//                Text("🎯 Score: \(gameManager.score)")
+//                Text("🔄 Round \(gameManager.round) / \(totalRounds)")
+//            }
 
             // Start/Stop Listening Button
             Button(action: {
@@ -374,36 +376,45 @@ struct ARVoiceIntentView: View {
                     }
                 }
             }) {
-                Image(speechRecognizer.isListening ? "Answer" : "Submit")
-                    .resizable()
-                    .padding(.vertical, 50)
+                ZStack{
                     
+                    Image("FindLetter")
+                        .resizable()
+                    
+                    Image(speechRecognizer.isListening ? "Answer" : "Submit")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .offset(y: 50)
+                }
+                
                             
                             
             }
+            
+            
 
             // "You found it!" Notification
             if showNotification {
                 Text("🎉 You found it!")
                     .foregroundColor(.green)
-                    .font(.headline)
-                    .padding()
+                    .font(.custom("Fantastico", size: 28))                    .padding()
                     .background(Color.white)
                     .cornerRadius(12)
             }
 
             // Local Leaderboard
-            VStack(alignment: .leading) {
-                Text("📡 Local Leaderboard")
-                    .font(.headline)
-                    .foregroundColor(.yellow)
-                
-                ForEach(multiplayer.peerScores.sorted(by: { $0.value > $1.value }), id: \.key) { name, score in
-                    Text("\(name)\(multiplayer.hostName == name ? " 👑" : ""): \(score)")
-                        .font(.caption)
-                        .foregroundColor(.white)
-                }
-            }
+            // KosonginSek
+//            VStack(alignment: .leading) {
+//                Text("📡 Local Leaderboard")
+//                    .font(.headline)
+//                    .foregroundColor(.yellow)
+//                
+//                ForEach(multiplayer.peerScores.sorted(by: { $0.value > $1.value }), id: \.key) { name, score in
+//                    Text("\(name)\(multiplayer.hostName == name ? " 👑" : ""): \(score)")
+//                        .font(.caption)
+//                        .foregroundColor(.white)
+//                }
+//            }
         }
         .padding()
         .background(Color.black.opacity(0.7))
