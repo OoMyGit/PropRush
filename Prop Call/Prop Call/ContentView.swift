@@ -180,11 +180,11 @@ struct ARVoiceIntentView: View {
             }
             .listStyle(InsetGroupedListStyle())
             
-            Button("🔄 Refresh") {
-                if multiplayer.username == multiplayer.hostName {
-                    multiplayer.sendFullPlayerList()
-                }
-            }
+//            Button("🔄 Refresh") {
+//                if multiplayer.username == multiplayer.hostName {
+//                    multiplayer.sendFullPlayerList()
+//                }
+//            }
             
             // "Start Game" button, only visible to the host
             if multiplayer.username == multiplayer.hostName {
@@ -203,6 +203,13 @@ struct ARVoiceIntentView: View {
             }
         }
         .padding()
+        .onAppear {
+            if multiplayer.username == multiplayer.hostName {
+                Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { _ in
+                    multiplayer.sendFullPlayerList()
+                }
+            }
+        }
     }
     
     /// The main AR game view.

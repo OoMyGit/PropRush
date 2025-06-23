@@ -67,7 +67,7 @@ class MultipeerManager: NSObject, ObservableObject {
             sendHostName(name)
         }
         // Announce this user's arrival to all other players
-//        sendUsernameAnnouncement(name)
+        sendUsernameAnnouncement(name)
     }
 
     /// Sends a command that tells all devices to start the game.
@@ -174,10 +174,13 @@ extension MultipeerManager: MCSessionDelegate, MCNearbyServiceAdvertiserDelegate
             // Send host's full state to new peer
             sendFullPeerScores(to: peerID)
             
-            // 🔥 Host sends full player list to all
-            if username == hostName {
+//            // 🔥 Host sends full player list to all
+//            if username == hostName {
+//                sendFullPlayerList()
+//            }
+            
+            // ✅ Always re-broadcast full list to ensure everyone is synced
                 sendFullPlayerList()
-            }
         }
     }
 
