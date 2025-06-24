@@ -15,10 +15,11 @@ class GameRoundManager: ObservableObject {
     @Published var roundEnded: Bool = false
     @Published var round: Int = 1
     @Published var gameOver: Bool = false
+    @Published var lastEndedByTimeout: Bool = false
 
     private var timer: Timer?
     private let maxRounds: Int = 5
-    private let validLetters: [String] = "ABCDEFGHIKLMNOPRSTUVW".map { String($0) }
+    private let validLetters: [String] = "BCDFHKLMOPRSTUW".map { String($0) }
 
     func startGame() {
         score = 0
@@ -36,10 +37,10 @@ class GameRoundManager: ObservableObject {
 
         roundEnded = false
         currentLetter = validLetters.randomElement() ?? "B"
-        timeRemaining = 30
+        timeRemaining = 60
         startTimer()
         
-        round += 5
+        round += 1
     }
 
     private func startTimer() {
@@ -56,11 +57,14 @@ class GameRoundManager: ObservableObject {
     }
 
     private func handleNoMatchAndContinue() {
-        startNewRound()
-        
-        // Notify peers about the new state
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(name: .gameStateDidChange, object: nil)
+        timer?.invalidate()
+        roundEnded = true
+        lastEndedByTimeout = true
+
+        NotificationCenter.default.post(name: .gameStateDidChange, object: nil)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            self.startNewRound()
         }
     }
 
@@ -72,9 +76,7 @@ class GameRoundManager: ObservableObject {
 
     func incrementScoreAndNextRound(onSuccess: (() -> Void)? = nil) {
         score += 1
-        
-        
-        
+        lastEndedByTimeout = false
         startNewRound()
         onSuccess?()
     }

@@ -9,6 +9,10 @@ import Foundation
 import MultipeerConnectivity
 import Combine
 
+extension Notification.Name {
+    static let roundDidEnd = Notification.Name("roundDidEnd")
+}
+
 struct GameState: Codable {
     let round: Int
     let score: Int
@@ -82,8 +86,15 @@ class MultipeerManager: NSObject, ObservableObject {
 
     func sendScore(_ score: Int) {
         guard !username.isEmpty else { return }
-        peerScores[username] = score
-        let dict: [String: Any] = ["type": "score", "name": username, "score": score]
+        
+        // ✅ Make sure YOUR local peerScores is updated too
+        self.peerScores[username] = score
+        
+        let dict: [String: Any] = [
+            "type": "score",
+            "name": username,
+            "score": score
+        ]
         if let data = try? JSONSerialization.data(withJSONObject: dict, options: []) {
             sendDataToAllPeers(data)
         }
@@ -145,6 +156,13 @@ class MultipeerManager: NSObject, ObservableObject {
         }
     }
     
+    func sendRoundEnded() {
+        let dict: [String: Any] = ["type": "roundEnd"]
+        if let data = try? JSONSerialization.data(withJSONObject: dict) {
+            sendDataToAllPeers(data)
+        }
+    }
+    
     func sendGameOver(winner: String) {
         let dict: [String: Any] = [
             "type": "gameOver",
@@ -155,6 +173,36 @@ class MultipeerManager: NSObject, ObservableObject {
         }
     }
     
+    func resetGame() {
+        // Reset local scores
+        for player in peerScores.keys {
+            peerScores[player] = 0
+        }
+
+        // Reset game state
+        let initialGameState = GameState(round: 1, score: 0, currentLetter: "", timeRemaining: 60) // or whatever default you want
+        let wrapper = GameStateWrapper(type: "gamestate", state: initialGameState)
+
+        if let data = try? JSONEncoder().encode(wrapper) {
+            sendDataToAllPeers(data)
+        }
+
+        // Re-broadcast scores
+        sendFullPlayerList()
+        for (name, _) in peerScores {
+            sendScore(0) // Send score = 0 to sync all peers
+        }
+
+        // You can also trigger a UI reset manually (if needed)
+        receivedGameStatePublisher.send(initialGameState)
+    }
+    
+    func sendResetGame() {
+        let dict: [String: Any] = ["type": "resetGame"]
+        if let data = try? JSONSerialization.data(withJSONObject: dict) {
+            sendDataToAllPeers(data)
+        }
+    }
 }
 
 // MARK: - Multipeer Delegate Methods
@@ -199,7 +247,9 @@ extension MultipeerManager: MCSessionDelegate, MCNearbyServiceAdvertiserDelegate
                 switch type {
                 case "score":
                     if let name = dict["name"] as? String, let score = dict["score"] as? Int {
-                        self.peerScores[name] = score
+                        DispatchQueue.main.async {
+                            self.peerScores[name] = score
+                        }
                     }
                     
                 case "username":
@@ -216,7 +266,7 @@ extension MultipeerManager: MCSessionDelegate, MCNearbyServiceAdvertiserDelegate
                     if let host = dict["host"] as? String {
                         self.hostName = host
                     }
-                
+                    
                 case "players":
                     if let playerList = dict["players"] as? [String] {
                         for player in playerList {
@@ -230,14 +280,23 @@ extension MultipeerManager: MCSessionDelegate, MCNearbyServiceAdvertiserDelegate
                     // The host has started the game
                     self.gameShouldStartPublisher.send()
                     
+                case "roundEnd":
+                    NotificationCenter.default.post(name: .roundDidEnd, object: nil)
+                
+                    
                 case "gameOver":
                     if let win = dict["winner"] as? String {
                         DispatchQueue.main.async {
-                            self.peerScores[win, default: 0] += 0 // No-op to ensure they’re in list
+                            self.peerScores[win] = self.peerScores[win, default: 0]
                             NotificationCenter.default.post(name: .gameDidEnd, object: win)
                         }
                     }
-                    
+                case "resetGame":
+                    self.peerScores = [:]
+                    self.receivedGameStatePublisher.send(
+                        GameState(round: 0, score: 0, currentLetter: "", timeRemaining: 0)
+                    )
+
                 default:
                     break
                 }
@@ -261,3 +320,4 @@ extension MultipeerManager: MCSessionDelegate, MCNearbyServiceAdvertiserDelegate
         // Optional: Handle player disconnection by removing them from the list
     }
 }
+

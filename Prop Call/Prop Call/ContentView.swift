@@ -53,6 +53,10 @@ struct ARVoiceIntentView: View {
     @State private var showNotification = false
     @State private var gameOver = false
     @State private var winner: String = ""
+    @State private var winnerScore: Int = 0
+    
+    @State private var lastScoringUsername: String = ""
+    @State private var lastFoundWord: String = ""
     
     @State private var isLoading = true
     @State private var isInWaitingRoom = false
@@ -125,6 +129,18 @@ struct ARVoiceIntentView: View {
                         currentLetter: state.currentLetter,
                         timeRemaining: state.timeRemaining
                     )
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .roundDidEnd)) { _ in
+                    if !showNotification {
+                        showNotification = true
+                        gameManager.endRound()
+
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                            detector.resetRound()
+                            speechRecognizer.spokenText = ""
+                            showNotification = false
+                        }
+                    }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .gameDidEnd)) { notification in
                     if let win = notification.object as? String {
@@ -257,8 +273,7 @@ struct ARVoiceIntentView: View {
                     List {
                         Section {
                             ForEach(Array(multiplayer.peerScores.keys.sorted().enumerated()), id: \.element) { index, playerName in
-                                Text("P\(index + 1) \(playerName)")
-                                    .font(.subTitleNow)
+                                Text("P\(index + 1). \(playerName)")
                                     .foregroundColor(.white)
                                     .fontWeight(.bold)
                                     .listRowBackground(Color.clear)
@@ -296,7 +311,6 @@ struct ARVoiceIntentView: View {
                         Section {
                             ForEach(Array(multiplayer.peerScores.keys.sorted().enumerated()), id: \.element) { index, playerName in
                                 Text("P\(index + 1) \(playerName)")
-                                    .font(.custom("HeadingNowTrial-68Heavy", size: 24))
                                     .foregroundColor(.white)
                                     .fontWeight(.bold)
                                     .listRowBackground(Color.clear)
@@ -335,13 +349,9 @@ struct ARVoiceIntentView: View {
                     if !showNotification {
                         showNotification = true
                         gameManager.endRound()
+                        multiplayer.sendRoundEnded()
                         
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                            detector.resetRound()
-                            speechRecognizer.spokenText = ""
-                            showNotification = false
-                            
-                            if gameManager.round < totalRounds {
+                        if gameManager.round < totalRounds {
                                 gameManager.incrementScoreAndNextRound {
                                     multiplayer.sendGameState(
                                         round: gameManager.round,
@@ -350,59 +360,36 @@ struct ARVoiceIntentView: View {
                                         timeRemaining: gameManager.timeRemaining
                                     )
                                     multiplayer.sendScore(gameManager.score)
-                                    
-                                    
-                                    //                                    Image("Leaderboard")
-                                    //                                        .resizable()
-                                    //                                        .scaledToFill()
-                                    //                                        .frame(width: UIScreen.main.bounds.width,
-                                    //                                               height: UIScreen.main.bounds.height)
-                                    //                                        .ignoresSafeArea()
-                                    //
-                                    //                                    Text("Username")
-                                    //                                        .font(.headingNowTitle)
-                                    //                                        .fontWeight(.bold)
-                                    //                                        .foregroundColor(.white)
-                                    //                                        .offset(y: -345)
-                                    //
-                                    //                                    Text(detector.detectedLabel)
-                                    //                                        .font(.headingNowTitle)
-                                    //                                        .fontWeight(.bold)
-                                    //                                        .foregroundColor(.white)
-                                    //                                        .offset(y: -300)
-                                    //
-                                    //                                    CountdownView()
-                                    //                                        .offset(x: 52, y: 375)
-                                    //
-                                    //
-                                    //
-                                    //
-                                    //                                    VStack(alignment: .leading) {
-                                    //
-                                    //                                        ForEach(multiplayer.peerScores.sorted(by: { $0.value > $1.value }), id: \.key) { name, score in
-                                    //                                            Text("\(name)\(multiplayer.hostName == name ? " 👑" : ""): \(score)")
-                                    //                                                .font(.headingNowTitle)
-                                    //                                                .fontWeight(.bold)
-                                    //                                                .foregroundColor(.white)
-                                    //                                                .offset(y: 50)
-                                    //                                        }
-                                    //                                    }
-                                    
-                                    
-                                    
                                 }
-                            } else {
-                                gameManager.stop()
-                                winner = multiplayer.peerScores.max(by: { $0.value < $1.value })?.key ?? "No one"
-                                gameOver = true
-                                multiplayer.sendGameOver(winner: winner) // 🔥 Send to all peers
-                            }
+                        } else {
+                            gameManager.stop()
+                            winner = multiplayer.peerScores.max(by: { $0.value < $1.value })?.key ?? "DRAW"
+                            winnerScore = multiplayer.peerScores.max(by: { $0.value < $1.value })?.value ?? 0
+                            gameOver = true
+                            multiplayer.sendGameOver(winner: winner) //
+                        }
+                        
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                            detector.resetRound()
+                            speechRecognizer.spokenText = ""
+                            showNotification = false
+                            lastScoringUsername = ""
+                            lastFoundWord = ""
                         }
                     }
                 }
             })
             .edgesIgnoringSafeArea(.all)
-            
+            .onReceive(gameManager.$roundEnded) { ended in
+                if ended && gameManager.lastEndedByTimeout && !showNotification {
+                    showNotification = true
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                        showNotification = false
+                    }
+                }
+            }
+
             // Game Info Overlay
             GameOverlayView()
         }
@@ -422,8 +409,7 @@ struct ARVoiceIntentView: View {
                         .foregroundColor(.white)
                         .offset(y: -107)
                     
-                    Text("\(winner)")
-                        .font(.headingNowTitle)
+                    Text("\(winnerScore)")
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                         .offset(y: 179)
@@ -432,11 +418,14 @@ struct ARVoiceIntentView: View {
                     Button("     ") {
                         
                         gameManager.score = 0
-                        multiplayer.sendScore(0) // Announce reset score to leaderboard
-                        gamePhase = .lobby
-                        gameManager.round = 0
-                        
-                        UsernameEntryView()
+                            gameManager.round = 0
+                            gameManager.currentLetter = ""
+                            gameManager.timeRemaining = 0
+
+                            multiplayer.sendScore(0)
+                            multiplayer.sendResetGame()
+                            
+                            gamePhase = .lobby
                     }
                     .font(.headingNowTitle)
                     .padding(.horizontal, 70)
@@ -471,21 +460,6 @@ struct ARVoiceIntentView: View {
     @ViewBuilder
     private func GameOverlayView() -> some View {
         VStack(spacing: 10) {
-            // Game Info Texts
-            // KosonginSek
-            
-            //            VStack {
-            //                Text("🎤 \(gameManager.promptText())")
-            //                Text("⏳ Time Left: \(gameManager.timeRemaining) sec")
-            //                Text("You said: \(speechRecognizer.spokenText)")
-            //                Text("Detected: \(detector.detectedLabel)")
-            //                Text("✅ Match: \(detector.matchFound ? "Yes" : "No")")
-            //                Text("🎯 Score: \(gameManager.score)")
-            //                Text("🔄 Round \(gameManager.round) / \(totalRounds)")
-            //            }
-            
-            // Start/Stop Listening Button
-            
             Button(action: {
                 if speechRecognizer.isListening {
                     speechRecognizer.stopListening()
@@ -511,6 +485,12 @@ struct ARVoiceIntentView: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                     
+                    Text("Round \(gameManager.round) / \(totalRounds)")
+                        .font(.system(size: 15))
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .offset(y: -300)
+                    
                     Text("Detected: \(detector.detectedLabel)")
                         .font(.system(size: 10))
                         .fontWeight(.bold)
@@ -524,7 +504,6 @@ struct ARVoiceIntentView: View {
                         .offset(y: -180)
                     
                     Text("\"\(gameManager.currentLetter)\"")
-                    
                         .font(.system(size: 12))
                         .fontWeight(.bold)
                         .foregroundColor(.white)
@@ -534,7 +513,7 @@ struct ARVoiceIntentView: View {
                         You said:
                         \(speechRecognizer.spokenText)
                         """)
-                    .font(.system(size: 15))
+                    .font(.subTitleNow)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
                     .offset(y: 185)
@@ -562,53 +541,33 @@ struct ARVoiceIntentView: View {
                                height: UIScreen.main.bounds.height)
                         .ignoresSafeArea()
                     
-                    Text("Username")
+                    Text("\(lastScoringUsername)")
                         .font(.headingNowTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                         .offset(y: -347)
                     
-                    Text("Troll")
+                    Text("\(lastFoundWord)")
                         .font(.headingNowTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                         .offset(y: -300)
                     
                     CountdownView()
-                        .offset(x: 52, y: 375)
+                        .offset(x: 52, y: 350)
                 
                     VStack(alignment: .leading) {
                         
                         ForEach(multiplayer.peerScores.sorted(by: { $0.value > $1.value }), id: \.key) { name, score in
                             Text("\(name)\(multiplayer.hostName == name ? " 👑" : ""): \(score)")
-                                .font(.headingNowTitle)
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
-                                .offset(y: 25)
+                                .offset(y: 30)
                             
                         }
                     }
                 }
-                //                Text("🎉 You found it!")
-                //                    .foregroundColor(.green)
-                //                    .font(.custom("Fantastico", size: 28))                    .padding()
-                //                    .background(Color.white)
-                //                    .cornerRadius(12)
             }
-            
-            // Local Leaderboard
-            // KosonginSek
-            //            VStack(alignment: .leading) {
-            //                Text("📡 Local Leaderboard")
-            //                    .font(.headline)
-            //                    .foregroundColor(.yellow)
-            //
-            //                ForEach(multiplayer.peerScores.sorted(by: { $0.value > $1.value }), id: \.key) { name, score in
-            //                    Text("\(name)\(multiplayer.hostName == name ? " 👑" : ""): \(score)")
-            //                        .font(.caption)
-            //                        .foregroundColor(.white)
-            //                }
-            //            }
         }
         .padding()
         .cornerRadius(16)

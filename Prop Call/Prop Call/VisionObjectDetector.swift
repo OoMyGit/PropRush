@@ -73,8 +73,6 @@ class VisionObjectDetector: ObservableObject {
         let spokenLower = spoken.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         let prefix = letter.lowercased()
 
-        print("🧠 Checking match... Detected: \(detected), Spoken: \(spokenLower), Letter: \(prefix)")
-
         if !matchFound && detected.hasPrefix(prefix) && spokenLower.hasPrefix(prefix) {
             matchFound = true
             onSuccess()
