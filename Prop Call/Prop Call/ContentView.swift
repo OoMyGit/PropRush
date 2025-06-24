@@ -27,6 +27,15 @@ extension Notification.Name {
     static let gameDidEnd = Notification.Name("gameDidEnd")
 }
 
+extension Font {
+    static var headingNowTitle: Font {
+        .custom("HeadingNowTrial-68Heavy", size: 24) // adjust size if needed
+    }
+    static var subTitleNow: Font {
+        .custom("HeadingNowTrial-68Heavy", size: 16) // adjust size if needed
+    }
+}
+
 struct ARVoiceIntentView: View {
     // MARK: - State Objects
     @StateObject private var speechRecognizer = SpeechRecognizer()
@@ -239,7 +248,7 @@ struct ARVoiceIntentView: View {
                     
                     if let host = multiplayer.hostName {
                         Text("👑 Host: \(host)")
-                            .font(.title2)
+                            .font(.headingNowTitle)
                             .fontWeight(.semibold)
                             .offset(y:130)
                             .font(.custom("Funtastic", size: 18))
@@ -249,6 +258,7 @@ struct ARVoiceIntentView: View {
                         Section {
                             ForEach(Array(multiplayer.peerScores.keys.sorted().enumerated()), id: \.element) { index, playerName in
                                 Text("P\(index + 1) \(playerName)")
+                                    .font(.subTitleNow)
                                     .foregroundColor(.white)
                                     .fontWeight(.bold)
                                     .listRowBackground(Color.clear)
@@ -276,16 +286,17 @@ struct ARVoiceIntentView: View {
                 } else {
                     if let host = multiplayer.hostName {
                         Text("👑 Host: \(host)")
-                            .font(.title2)
+                            .font(.headingNowTitle)
                             .fontWeight(.semibold)
                             .offset(y:130)
-                            .font(.custom("Funtastic", size: 18))
+                            .foregroundColor(.white)
                     }
                     
                     List {
                         Section {
                             ForEach(Array(multiplayer.peerScores.keys.sorted().enumerated()), id: \.element) { index, playerName in
                                 Text("P\(index + 1) \(playerName)")
+                                    .font(.custom("HeadingNowTrial-68Heavy", size: 24))
                                     .foregroundColor(.white)
                                     .fontWeight(.bold)
                                     .listRowBackground(Color.clear)
@@ -349,13 +360,13 @@ struct ARVoiceIntentView: View {
                                     //                                        .ignoresSafeArea()
                                     //
                                     //                                    Text("Username")
-                                    //                                        .font(.title2)
+                                    //                                        .font(.headingNowTitle)
                                     //                                        .fontWeight(.bold)
                                     //                                        .foregroundColor(.white)
                                     //                                        .offset(y: -345)
                                     //
                                     //                                    Text(detector.detectedLabel)
-                                    //                                        .font(.title2)
+                                    //                                        .font(.headingNowTitle)
                                     //                                        .fontWeight(.bold)
                                     //                                        .foregroundColor(.white)
                                     //                                        .offset(y: -300)
@@ -370,7 +381,7 @@ struct ARVoiceIntentView: View {
                                     //
                                     //                                        ForEach(multiplayer.peerScores.sorted(by: { $0.value > $1.value }), id: \.key) { name, score in
                                     //                                            Text("\(name)\(multiplayer.hostName == name ? " 👑" : ""): \(score)")
-                                    //                                                .font(.title2)
+                                    //                                                .font(.headingNowTitle)
                                     //                                                .fontWeight(.bold)
                                     //                                                .foregroundColor(.white)
                                     //                                                .offset(y: 50)
@@ -406,13 +417,13 @@ struct ARVoiceIntentView: View {
                         .ignoresSafeArea()
                     
                     Text("\(winner) Won!")
-                        .font(.title2)
+                        .font(.headingNowTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                         .offset(y: -107)
                     
                     Text("\(winner)")
-                        .font(.title2)
+                        .font(.headingNowTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                         .offset(y: 179)
@@ -427,7 +438,7 @@ struct ARVoiceIntentView: View {
                         
                         UsernameEntryView()
                     }
-                    .font(.title2)
+                    .font(.headingNowTitle)
                     .padding(.horizontal, 70)
                     .padding(.vertical, 20)
                     .foregroundColor(.black)
@@ -552,13 +563,13 @@ struct ARVoiceIntentView: View {
                         .ignoresSafeArea()
                     
                     Text("Username")
-                        .font(.title2)
+                        .font(.headingNowTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                         .offset(y: -347)
                     
                     Text("Troll")
-                        .font(.title2)
+                        .font(.headingNowTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                         .offset(y: -300)
@@ -570,7 +581,7 @@ struct ARVoiceIntentView: View {
                         
                         ForEach(multiplayer.peerScores.sorted(by: { $0.value > $1.value }), id: \.key) { name, score in
                             Text("\(name)\(multiplayer.hostName == name ? " 👑" : ""): \(score)")
-                                .font(.title2)
+                                .font(.headingNowTitle)
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
                                 .offset(y: 25)
