@@ -39,7 +39,7 @@ class GameRoundManager: ObservableObject {
         timeRemaining = 30
         startTimer()
         
-        round += 1
+        round += 5
     }
 
     private func startTimer() {
@@ -72,6 +72,9 @@ class GameRoundManager: ObservableObject {
 
     func incrementScoreAndNextRound(onSuccess: (() -> Void)? = nil) {
         score += 1
+        
+        
+        
         startNewRound()
         onSuccess?()
     }

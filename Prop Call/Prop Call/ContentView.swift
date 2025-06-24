@@ -35,7 +35,7 @@ struct ARVoiceIntentView: View {
     @StateObject private var gameManager = GameRoundManager()
     
     
-
+    
     // MARK: - State Properties
     @State private var gamePhase: GamePhase = .usernameEntry
     @State private var username: String = ""
@@ -47,28 +47,34 @@ struct ARVoiceIntentView: View {
     
     @State private var isLoading = true
     @State private var isInWaitingRoom = false
-
-    
     
     let totalRounds = 5
-
+    
     var body: some View {
-        
         ZStack {
-            
             if isLoading {
-                            Image("LoadingPage")
-                                .resizable()
-                                .scaledToFill()
-                                .edgesIgnoringSafeArea(.all)
-                                .onAppear {
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                                        isLoading = false
-                                    }
-                                }
+                Image("LoadingPage")
+                    .resizable()
+                    .scaledToFill()
+                    .edgesIgnoringSafeArea(.all)
+                    .onAppear {
+                        
+                        DispatchQueue.main.async {
+                            do {
+                                let audioSession = AVAudioSession.sharedInstance()
+                                try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
+                                try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+                                speechRecognizer.startListening()
+                            } catch {
+                                print("Audio Session error: \(error)")
+                            }
                         }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                            isLoading = false
+                        }
+                    }
+            }
             else {
-                
                 
                 ZStack {
                     
@@ -123,10 +129,10 @@ struct ARVoiceIntentView: View {
         }
         
     }
-
+    
     private func startGameLocallyAndBroadcastIfHost() {
         gameManager.startGame()
-
+        
         if multiplayer.username == multiplayer.hostName {
             multiplayer.sendGameState(
                 round: gameManager.round,
@@ -135,13 +141,13 @@ struct ARVoiceIntentView: View {
                 timeRemaining: gameManager.timeRemaining
             )
         }
-
+        
         gamePhase = .inGame
     }
-
+    
     
     // MARK: - Subviews for each Game Phase
-
+    
     /// View for entering the player's name.
     @ViewBuilder
     private func UsernameEntryView() -> some View {
@@ -161,25 +167,25 @@ struct ARVoiceIntentView: View {
                     .padding(.horizontal, 60)
                     .onChange(of: username) { _, newValue in
                         if newValue.isEmpty { // Don't trigger alert for empty string
-                                    showUsernameTakenAlert = false
-                                } else if multiplayer.peerScores.keys.contains(newValue) && newValue != multiplayer.username {
-                                    // Only show alert if the new username is in peerScores AND it's NOT our own username
-                                    showUsernameTakenAlert = true
-                                } else {
-                                    showUsernameTakenAlert = false
-                                }
+                            showUsernameTakenAlert = false
+                        } else if multiplayer.peerScores.keys.contains(newValue) && newValue != multiplayer.username {
+                            // Only show alert if the new username is in peerScores AND it's NOT our own username
+                            showUsernameTakenAlert = true
+                        } else {
+                            showUsernameTakenAlert = false
+                        }
                     }
                     .alert("Username Taken", isPresented: $showUsernameTakenAlert) {
-                            Button("OK", role: .cancel) {
-                                username = "" // Still good to clear if it was genuinely taken by someone else
-                            }
+                        Button("OK", role: .cancel) {
+                            username = "" // Still good to clear if it was genuinely taken by someone else
                         }
+                    }
                 
                 Button("                                                ") {
                     multiplayer.configureUsername(username)
                     gamePhase = .lobby
                 }
-                .disabled(username.isEmpty || showUsernameTakenAlert)
+                //                .disabled(username.isEmpty || showUsernameTakenAlert)
                 .padding()
                 .background(Color.clear)
                 .foregroundColor(.white)
@@ -194,91 +200,114 @@ struct ARVoiceIntentView: View {
             .alert("Username Taken", isPresented: $showUsernameTakenAlert) {
                 Button("OK", role: .cancel) { username = "" }
             }
-                
-            }
             
+        }
+        
     }
     
     /// View for the waiting room lobby.
     @ViewBuilder
     private func LobbyView() -> some View {
-        
         ZStack {
-            
-        Image("WaitingRoomHost")
-                .resizable()
-                .scaledToFill()
-                .edgesIgnoringSafeArea(.all)
-            
-        
-        VStack (spacing: 0) {
-            
-            // Display the host
-            
-            
-            // List of connected players
-            
-            
-            //            Button("🔄 Refresh") {
-            //                if multiplayer.username == multiplayer.hostName {
-            //                    multiplayer.sendFullPlayerList()
-            //                }
-            //            }
-            
-            // "Start Game" button, only visible to the host
             if multiplayer.username == multiplayer.hostName {
                 
-                if let host = multiplayer.hostName {
-                    Text("👑 Host: \(host)")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .offset(y:130)
-                        .font(.custom("Funtastic", size: 18))
-                }
+                Image("WaitingHost")
+                    .resizable()
+                    .scaledToFill()
+                    .edgesIgnoringSafeArea(.all)
+            }
+            else
+            {
+                Image("WaitingPlayer")
+                    .resizable()
+                    .scaledToFill()
+                    .edgesIgnoringSafeArea(.all)
+            }
+            
+            VStack (spacing: 0) {
+                // List of connected players
                 
-                List {
-                    Section {
-                        ForEach(Array(multiplayer.peerScores.keys.sorted().enumerated()), id: \.element) { index, playerName in
-                            Text("P\(index + 1) \(playerName)")
-                                .foregroundColor(.white)
-                                .fontWeight(.bold)
-                                .listRowBackground(Color.clear)
+                
+                //            Button("🔄 Refresh") {
+                //                if multiplayer.username == multiplayer.hostName {
+                //                    multiplayer.sendFullPlayerList()
+                //                }
+                //            }
+                
+                // "Start Game" button, only visible to the host
+                if multiplayer.username == multiplayer.hostName {
+                    
+                    if let host = multiplayer.hostName {
+                        Text("👑 Host: \(host)")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .offset(y:130)
+                            .font(.custom("Funtastic", size: 18))
+                    }
+                    
+                    List {
+                        Section {
+                            ForEach(Array(multiplayer.peerScores.keys.sorted().enumerated()), id: \.element) { index, playerName in
+                                Text("P\(index + 1) \(playerName)")
+                                    .foregroundColor(.white)
+                                    .fontWeight(.bold)
+                                    .listRowBackground(Color.clear)
+                            }
                         }
                     }
+                    .listStyle(InsetGroupedListStyle())
+                    .scrollContentBackground(.hidden)
+                    .background(Color.clear)
+                    .offset(y: 310)
+                    .padding(.horizontal, 50)
+                    
+                    
+                    Button("            ") {
+                        // This command will trigger the 'gameShouldStartPublisher' for everyone
+                        multiplayer.sendStartGameCommand()
+                        startGameLocallyAndBroadcastIfHost() // Host starts game locally
+                    }
+                    .padding(.horizontal, 55)
+                    .padding(.vertical, 15)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+                    .offset(y:-120)
+                    
+                } else {
+                    if let host = multiplayer.hostName {
+                        Text("👑 Host: \(host)")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .offset(y:130)
+                            .font(.custom("Funtastic", size: 18))
+                    }
+                    
+                    List {
+                        Section {
+                            ForEach(Array(multiplayer.peerScores.keys.sorted().enumerated()), id: \.element) { index, playerName in
+                                Text("P\(index + 1) \(playerName)")
+                                    .foregroundColor(.white)
+                                    .fontWeight(.bold)
+                                    .listRowBackground(Color.clear)
+                            }
+                        }
+                    }
+                    .listStyle(InsetGroupedListStyle())
+                    .scrollContentBackground(.hidden)
+                    .background(Color.clear)
+                    .offset(y: 310)
+                    .padding(.horizontal, 50)
                 }
-                .listStyle(InsetGroupedListStyle())
-                .scrollContentBackground(.hidden)
-                .background(Color.clear)
-                .offset(y: 310)
-                .padding(.horizontal, 50)
-
-                
-                Button("            ") {
-                    // This command will trigger the 'gameShouldStartPublisher' for everyone
-                    multiplayer.sendStartGameCommand()
-                    startGameLocallyAndBroadcastIfHost() // Host starts game locally
+            }
+            .padding()
+            .onAppear {
+                if multiplayer.username == multiplayer.hostName {
+                    Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { _ in
+                        multiplayer.sendFullPlayerList()
+                    }
                 }
-                .padding(.horizontal, 55)
-                .padding(.vertical, 15)
-                .background(Color.clear)
-                .foregroundColor(.white)
-                .cornerRadius(12)
-                .offset(y:-120)
-                
-            } else {
-                Text("Waiting for the host to start the game...")
-                    .foregroundColor(.blue)
             }
         }
-        .padding()
-        .onAppear {
-            if multiplayer.username == multiplayer.hostName {
-                Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { _ in
-                    multiplayer.sendFullPlayerList()
-                }
-            }
-        }
-    }
     }
     
     /// The main AR game view.
@@ -296,7 +325,7 @@ struct ARVoiceIntentView: View {
                         showNotification = true
                         gameManager.endRound()
                         
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
                             detector.resetRound()
                             speechRecognizer.spokenText = ""
                             showNotification = false
@@ -310,6 +339,46 @@ struct ARVoiceIntentView: View {
                                         timeRemaining: gameManager.timeRemaining
                                     )
                                     multiplayer.sendScore(gameManager.score)
+                                    
+                                    
+                                    //                                    Image("Leaderboard")
+                                    //                                        .resizable()
+                                    //                                        .scaledToFill()
+                                    //                                        .frame(width: UIScreen.main.bounds.width,
+                                    //                                               height: UIScreen.main.bounds.height)
+                                    //                                        .ignoresSafeArea()
+                                    //
+                                    //                                    Text("Username")
+                                    //                                        .font(.title2)
+                                    //                                        .fontWeight(.bold)
+                                    //                                        .foregroundColor(.white)
+                                    //                                        .offset(y: -345)
+                                    //
+                                    //                                    Text(detector.detectedLabel)
+                                    //                                        .font(.title2)
+                                    //                                        .fontWeight(.bold)
+                                    //                                        .foregroundColor(.white)
+                                    //                                        .offset(y: -300)
+                                    //
+                                    //                                    CountdownView()
+                                    //                                        .offset(x: 52, y: 375)
+                                    //
+                                    //
+                                    //
+                                    //
+                                    //                                    VStack(alignment: .leading) {
+                                    //
+                                    //                                        ForEach(multiplayer.peerScores.sorted(by: { $0.value > $1.value }), id: \.key) { name, score in
+                                    //                                            Text("\(name)\(multiplayer.hostName == name ? " 👑" : ""): \(score)")
+                                    //                                                .font(.title2)
+                                    //                                                .fontWeight(.bold)
+                                    //                                                .foregroundColor(.white)
+                                    //                                                .offset(y: 50)
+                                    //                                        }
+                                    //                                    }
+                                    
+                                    
+                                    
                                 }
                             } else {
                                 gameManager.stop()
@@ -326,20 +395,67 @@ struct ARVoiceIntentView: View {
             // Game Info Overlay
             GameOverlayView()
         }
-        .alert(isPresented: $gameOver) {
-            Alert(
-                title: Text("🏆 Game Over"),
-                message: Text("Winner: \(winner)"),
-                dismissButton: .default(Text("Back to Lobby")) {
-                    // Reset game state and return to lobby
-                    gameManager.score = 0
-                    multiplayer.sendScore(0) // Announce reset score to leaderboard
-                    gamePhase = .lobby
+        ZStack {
+            if gameOver {
+                ZStack {
+                    Image("Winner")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: UIScreen.main.bounds.width,
+                               height: UIScreen.main.bounds.height)
+                        .ignoresSafeArea()
+                    
+                    Text("\(winner) Won!")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .offset(y: -107)
+                    
+                    Text("\(winner)")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .offset(y: 179)
+                    
+                    // A "Back to Lobby" button
+                    Button("     ") {
+                        
+                        gameManager.score = 0
+                        multiplayer.sendScore(0) // Announce reset score to leaderboard
+                        gamePhase = .lobby
+                        gameManager.round = 0
+                        
+                        UsernameEntryView()
+                    }
+                    .font(.title2)
+                    .padding(.horizontal, 70)
+                    .padding(.vertical, 20)
+                    .foregroundColor(.black)
+                    .cornerRadius(10)
+                    .offset(y: 264)
                 }
-            )
+            }
         }
+        
+        
+        //        .alert(isPresented: $gameOver) {
+        //
+        //
+        //
+        //
+        //            Alert(
+        //                title: Text("🏆 Game Over"),
+        //                message: Text("Winner: \(winner)"),
+        //                dismissButton: .default(Text("Back to Lobby")) {
+        //                    // Reset game state and return to lobby
+        //                    gameManager.score = 0
+        //                    multiplayer.sendScore(0) // Announce reset score to leaderboard
+        //                    gamePhase = .lobby
+        //                }
+        //            )
+        //        }
     }
-
+    
     /// The overlay displaying game stats during play.
     @ViewBuilder
     private func GameOverlayView() -> some View {
@@ -347,17 +463,18 @@ struct ARVoiceIntentView: View {
             // Game Info Texts
             // KosonginSek
             
-//            VStack {
-//                Text("🎤 \(gameManager.promptText())")
-//                Text("⏳ Time Left: \(gameManager.timeRemaining) sec")
-//                Text("You said: \(speechRecognizer.spokenText)")
-//                Text("Detected: \(detector.detectedLabel)")
-//                Text("✅ Match: \(detector.matchFound ? "Yes" : "No")")
-//                Text("🎯 Score: \(gameManager.score)")
-//                Text("🔄 Round \(gameManager.round) / \(totalRounds)")
-//            }
-
+            //            VStack {
+            //                Text("🎤 \(gameManager.promptText())")
+            //                Text("⏳ Time Left: \(gameManager.timeRemaining) sec")
+            //                Text("You said: \(speechRecognizer.spokenText)")
+            //                Text("Detected: \(detector.detectedLabel)")
+            //                Text("✅ Match: \(detector.matchFound ? "Yes" : "No")")
+            //                Text("🎯 Score: \(gameManager.score)")
+            //                Text("🔄 Round \(gameManager.round) / \(totalRounds)")
+            //            }
+            
             // Start/Stop Listening Button
+            
             Button(action: {
                 if speechRecognizer.isListening {
                     speechRecognizer.stopListening()
@@ -375,49 +492,114 @@ struct ARVoiceIntentView: View {
                         }
                     }
                 }
-            }) {
+            })  {
+                
                 ZStack{
                     
                     Image("FindLetter")
                         .resizable()
+                        .aspectRatio(contentMode: .fit)
                     
-                    Image(speechRecognizer.isListening ? "Answer" : "Submit")
+                    Text("Detected: \(detector.detectedLabel)")
+                        .font(.system(size: 10))
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .offset(y: -150)
+                    
+                    Text("⏳ Time Left: \(gameManager.timeRemaining) sec")
+                        .font(.system(size: 15))
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .offset(y: -180)
+                    
+                    Text("\"\(gameManager.currentLetter)\"")
+                    
+                        .font(.system(size: 12))
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .offset(x:22, y: -226)
+                    
+                    Text("""
+                        You said:
+                        \(speechRecognizer.spokenText)
+                        """)
+                    .font(.system(size: 15))
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .offset(y: 185)
+                    
+                    Image(speechRecognizer.isListening ? "Submit" : "Answer")
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .offset(y: 50)
+                    
+                    Text("🎯 Your Score: \(gameManager.score)")
+                        .font(.system(size: 10))
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .offset(y: 225)
                 }
-                
-                            
-                            
             }
-            
-            
-
             // "You found it!" Notification
             if showNotification {
-                Text("🎉 You found it!")
-                    .foregroundColor(.green)
-                    .font(.custom("Fantastico", size: 28))                    .padding()
-                    .background(Color.white)
-                    .cornerRadius(12)
+                
+                ZStack{
+                    Image("Leaderboard")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: UIScreen.main.bounds.width,
+                               height: UIScreen.main.bounds.height)
+                        .ignoresSafeArea()
+                    
+                    Text("Username")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .offset(y: -347)
+                    
+                    Text("Troll")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .offset(y: -300)
+                    
+                    CountdownView()
+                        .offset(x: 52, y: 375)
+                
+                    VStack(alignment: .leading) {
+                        
+                        ForEach(multiplayer.peerScores.sorted(by: { $0.value > $1.value }), id: \.key) { name, score in
+                            Text("\(name)\(multiplayer.hostName == name ? " 👑" : ""): \(score)")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .offset(y: 25)
+                            
+                        }
+                    }
+                }
+                //                Text("🎉 You found it!")
+                //                    .foregroundColor(.green)
+                //                    .font(.custom("Fantastico", size: 28))                    .padding()
+                //                    .background(Color.white)
+                //                    .cornerRadius(12)
             }
-
+            
             // Local Leaderboard
             // KosonginSek
-//            VStack(alignment: .leading) {
-//                Text("📡 Local Leaderboard")
-//                    .font(.headline)
-//                    .foregroundColor(.yellow)
-//                
-//                ForEach(multiplayer.peerScores.sorted(by: { $0.value > $1.value }), id: \.key) { name, score in
-//                    Text("\(name)\(multiplayer.hostName == name ? " 👑" : ""): \(score)")
-//                        .font(.caption)
-//                        .foregroundColor(.white)
-//                }
-//            }
+            //            VStack(alignment: .leading) {
+            //                Text("📡 Local Leaderboard")
+            //                    .font(.headline)
+            //                    .foregroundColor(.yellow)
+            //
+            //                ForEach(multiplayer.peerScores.sorted(by: { $0.value > $1.value }), id: \.key) { name, score in
+            //                    Text("\(name)\(multiplayer.hostName == name ? " 👑" : ""): \(score)")
+            //                        .font(.caption)
+            //                        .foregroundColor(.white)
+            //                }
+            //            }
         }
         .padding()
-        .background(Color.black.opacity(0.7))
         .cornerRadius(16)
         .padding()
     }
