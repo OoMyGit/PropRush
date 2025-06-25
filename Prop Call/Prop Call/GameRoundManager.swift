@@ -43,6 +43,16 @@ class GameRoundManager: ObservableObject {
         round += 1
     }
 
+    func resetRound() {
+        score = 0
+        round = 1
+        currentLetter = ""
+        timeRemaining = 60  // Default time for the first round
+        roundEnded = false
+        gameOver = false
+        lastEndedByTimeout = false
+    }
+    
     private func startTimer() {
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in

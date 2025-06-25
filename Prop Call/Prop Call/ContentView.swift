@@ -351,6 +351,10 @@ struct ARVoiceIntentView: View {
                         gameManager.endRound()
                         multiplayer.sendRoundEnded()
                         
+                        // Here, we set the lastScoringUsername and lastFoundWord
+                                lastScoringUsername = multiplayer.username // Assign the username of the player who guessed
+                                lastFoundWord = speechRecognizer.spokenText // Assign the word they guessed
+                        
                         if gameManager.round < totalRounds {
                                 gameManager.incrementScoreAndNextRound {
                                     multiplayer.sendGameState(
@@ -417,13 +421,9 @@ struct ARVoiceIntentView: View {
                     // A "Back to Lobby" button
                     Button("     ") {
                         
-                        gameManager.score = 0
-                            gameManager.round = 0
-                            gameManager.currentLetter = ""
-                            gameManager.timeRemaining = 0
-
-                            multiplayer.sendScore(0)
-                            multiplayer.sendResetGame()
+                        // Reset game and multiplayer data
+                            gameManager.resetRound()  // Reset round information
+                            multiplayer.resetGame()  // Reset multiplayer game state
                             
                             gamePhase = .lobby
                     }
@@ -532,7 +532,6 @@ struct ARVoiceIntentView: View {
             }
             // "You found it!" Notification
             if showNotification {
-                
                 ZStack{
                     Image("Leaderboard")
                         .resizable()
@@ -557,13 +556,11 @@ struct ARVoiceIntentView: View {
                         .offset(x: 52, y: 350)
                 
                     VStack(alignment: .leading) {
-                        
                         ForEach(multiplayer.peerScores.sorted(by: { $0.value > $1.value }), id: \.key) { name, score in
                             Text("\(name)\(multiplayer.hostName == name ? " 👑" : ""): \(score)")
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
                                 .offset(y: 30)
-                            
                         }
                     }
                 }
