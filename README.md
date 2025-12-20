@@ -118,15 +118,6 @@ Multipeer:
 
 ---
 
-## Screenshots
-
-(Replace with actual screenshots or links)
-- ![Lobby Placeholder](./screenshots/lobby.png)
-- ![In-Game Placeholder](./screenshots/ingame.png)
-- ![Winner Placeholder](./screenshots/winner.png)
-
----
-
 ## Roadmap
 
 Planned improvements:
@@ -137,40 +128,3 @@ Planned improvements:
 - Add unit tests and automated CI (Xcode Cloud / GitHub Actions).
 
 ---
-
-## Contributing
-
-1. Fork the repo and create a feature branch.  
-2. Keep changes focused and atomic.  
-3. Open a PR with a clear description and testing steps.  
-4. Ensure any added privacy-sensitive features include proper Info.plist keys and a brief justification.
-
-For issues, include:
-- Device model & iOS version
-- Steps to reproduce
-- Console logs (if applicable)
-
----
-
-## License
-
-This project is provided under the MIT License. See LICENSE file for details.
-
----
-
-If you want, I can:
-- Create an initial LICENSE file (MIT).  
-- Add basic screenshots and CI workflow examples.  
-- Draft a CONTRIBUTING.md with PR checklist.
-
-Relevant file references (quick links):
-- [`Prop_CallApp`](Prop Call/Prop Call/Prop_CallApp.swift)  
-- [`ARVoiceIntentView` / `ContentView.swift`](Prop Call/Prop Call/ContentView.swift)  
-- [`MultipeerManager`](Prop Call/Prop Call/MultipeerManager.swift)  
-- [`GameRoundManager`](Prop Call/Prop Call/GameRoundManager.swift)  
-- [`SpeechRecognizer`](Prop Call/Prop Call/SpeechRecognizer.swift)  
-- [`VisionObjectDetector`](Prop Call/Prop Call/VisionObjectDetector.swift)  
-- [`ARCoordinator`](Prop Call/Prop Call/ARCoordinator.swift)  
-- [`ARViewContainer`](Prop Call/Prop Call/ARViewContainer.swift)  
-- [`YOLOv8n.mlpackage`](Prop Call/Prop Call/YOLOv8n.mlpackage)  
-- [Assets.xcassets](Prop Call/Prop Call/Assets.xcassets)
