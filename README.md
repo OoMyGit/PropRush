@@ -1,4 +1,4 @@
-# Prop Call
+# Prop Rush
 
 A multiplayer AR party game for iOS that blends object detection and voice input: find a real-world prop that starts with a given letter, say it out loud, and score points. Built with Swift, SwiftUI, RealityKit, CoreML/Vision and MultipeerConnectivity.
 
@@ -6,7 +6,7 @@ A multiplayer AR party game for iOS that blends object detection and voice input
 
 ## Project Overview
 
-Prop Call is an AR-based, turn-based multiplayer game. Each round, players look for an object in the real world that starts with a target letter. The app uses a CoreML object detector (YOLOv8n) to identify objects and speech recognition to capture players' guesses. Multiplayer sync and simple lobby/host logic are handled via MultipeerConnectivity.
+Prop Rush (PropCall) is an AR-based, turn-based multiplayer game. Each round, players look for an object in the real world that starts with a target letter. The app uses a CoreML object detector (YOLOv8n) to identify objects and speech recognition to capture players' guesses. Multiplayer sync and simple lobby/host logic are handled via MultipeerConnectivity.
 
 Key entry points:
 - App entry: [`Prop_CallApp`](Prop Call/Prop Call/Prop_CallApp.swift)  
